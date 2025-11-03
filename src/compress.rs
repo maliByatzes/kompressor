@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Symbol {
-    value: char,
+    value: String,
     count: i32,
 }
 
@@ -43,20 +43,42 @@ impl Compress {
         }
     }
 
-    fn produce_tree(heap: &BinaryHeap<Symbol>) {}
+    fn produce_tree(heap: &mut BinaryHeap<Node<Symbol>>) {
+        loop {
+            if heap.len() <= 1 {
+                break;
+            }
 
-    fn freq_counter(&self) -> Vec<Symbol> {
+            let node1 = heap.pop().unwrap();
+            let node2 = heap.pop().unwrap();
+            let new_val = node1.value.value + &node2.value.value;
+            let new_count = node1.value.count + node2.value.count;
+
+            let new_node = Node {
+                value: Symbol {
+                    value: new_val,
+                    count: new_count,
+                },
+                left: Subtree { node1 },
+                right: Subtree { root: node2 },
+            };
+        }
+    }
+
+    fn freq_counter(&self) -> Vec<Node<Symbol>> {
         let mut temp_counter = HashMap::new();
 
         for chr in self.contents.chars() {
             temp_counter.entry(chr).and_modify(|e| *e += 1).or_insert(1);
         }
 
-        let counter: Vec<Symbol> = temp_counter
+        let counter: Vec<_> = temp_counter
             .iter()
-            .map(|(&key, &val)| Symbol {
-                value: key,
-                count: val,
+            .map(|(&key, &val)| {
+                Node::new(Symbol {
+                    value: key.to_string(),
+                    count: val,
+                })
             })
             .collect();
 
@@ -67,17 +89,17 @@ impl Compress {
 // TODO: move this somewhere else, actually make it a library
 // BST implementation (https://google.github.io/comprehensive-rust/smart-pointers/solution.html)
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Node<T: Ord> {
-    value: T,
-    left: Subtree<T>,
-    right: Subtree<T>,
+    pub value: T,
+    pub left: Subtree<T>,
+    pub right: Subtree<T>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Subtree<T: Ord>(Option<Box<Node<T>>>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BinaryTree<T: Ord> {
     root: Subtree<T>,
 }
@@ -137,6 +159,18 @@ impl<T: Ord> Subtree<T> {
     }
 }
 
+impl<T: Ord> Ord for Subtree<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.0.cmp(&self.0)
+    }
+}
+
+impl<T: Ord> PartialOrd for Subtree<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl<T: Ord> Node<T> {
     fn new(value: T) -> Self {
         Self {
@@ -144,6 +178,22 @@ impl<T: Ord> Node<T> {
             left: Subtree::new(),
             right: Subtree::new(),
         }
+    }
+}
+
+impl<T: Ord> Ord for Node<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .value
+            .cmp(&self.value)
+            .then_with(|| self.left.cmp(&other.left))
+            .then_with(|| self.right.cmp(&other.right))
+    }
+}
+
+impl<T: Ord> PartialOrd for Node<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
