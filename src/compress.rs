@@ -1,9 +1,24 @@
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 struct Symbol {
     value: char,
     count: i32,
+}
+
+impl Ord for Symbol {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other
+            .count
+            .cmp(&self.count)
+            .then_with(|| self.value.cmp(&other.value))
+    }
+}
+
+impl PartialOrd for Symbol {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 pub struct Compress {
@@ -20,7 +35,11 @@ impl Compress {
     pub fn compress(&self) {
         let counter = self.freq_counter();
 
-        println!("counter: {:#?}", counter);
+        let heap = BinaryHeap::from(counter);
+
+        for sym in &heap {
+            println!("{:?}", sym);
+        }
     }
 
     fn freq_counter(&self) -> Vec<Symbol> {
