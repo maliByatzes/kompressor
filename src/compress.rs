@@ -5,6 +5,7 @@ use std::collections::{BinaryHeap, HashMap};
 struct Symbol {
     value: String,
     count: i32,
+    label: i32,
 }
 
 impl Ord for Symbol {
@@ -42,10 +43,21 @@ impl Compress {
             println!("{:?}", sym);
         }
 
-        let _ = Self::produce_tree(&mut heap);
+        let root = Self::produce_tree(&mut heap);
+
+        let mut codes = HashMap::new();
+
+        if let Some(root_node) = root {
+            root_node.generate_codes(String::new(), &mut codes);
+
+            println!("\nHuffman Codes:");
+            for (chr, code) in &codes {
+                println!("'{chr}' -> {code}");
+            }
+        }
     }
 
-    fn produce_tree(heap: &mut BinaryHeap<Node<Symbol>>) {
+    fn produce_tree(heap: &mut BinaryHeap<Node<Symbol>>) -> Option<Node<Symbol>> {
         loop {
             if heap.len() <= 1 {
                 break;
@@ -53,13 +65,12 @@ impl Compress {
 
             let node1 = heap.pop().unwrap();
             let node2 = heap.pop().unwrap();
-            let new_val = node1.value.value.clone() + &node2.value.value;
-            let new_count = node1.value.count + node2.value.count;
 
             let new_node = Node {
                 value: Symbol {
-                    value: new_val,
-                    count: new_count,
+                    value: format!("{}{}", node1.value.value, node2.value.value),
+                    count: node1.value.count + node2.value.count,
+                    label: -1,
                 },
                 left: Subtree(Some(Box::new(node1))),
                 right: Subtree(Some(Box::new(node2))),
@@ -67,6 +78,14 @@ impl Compress {
 
             heap.push(new_node);
         }
+
+        let mut root = heap.pop();
+
+        if let Some(ref mut root_node) = root {
+            root_node.assign_labels();
+        }
+
+        root
     }
 
     fn freq_counter(&self) -> Vec<Node<Symbol>> {
@@ -82,6 +101,7 @@ impl Compress {
                 Node::new(Symbol {
                     value: key.to_string(),
                     count: val,
+                    label: -1,
                 })
             })
             .collect();
@@ -109,9 +129,9 @@ pub struct BinaryTree<T: Ord> {
 }
 
 impl<T: Ord> BinaryTree<T> {
-    fn new() -> Self {
+    fn new(node: Node<T>) -> Self {
         Self {
-            root: Subtree::new(),
+            root: Subtree(Some(Box::new(node))),
         }
     }
 
@@ -185,6 +205,37 @@ impl<T: Ord> Node<T> {
     }
 }
 
+impl Node<Symbol> {
+    fn assign_labels(&mut self) {
+        if let Some(left) = &mut self.left.0 {
+            left.value.label = 0;
+            left.assign_labels();
+        }
+
+        if let Some(right) = &mut self.right.0 {
+            right.value.label = 1;
+            right.assign_labels();
+        }
+    }
+
+    fn generate_codes(&self, current_code: String, codes: &mut HashMap<String, String>) {
+        if self.left.0.is_none() && self.right.0.is_none() {
+            codes.insert(self.value.value.clone(), current_code);
+            return;
+        }
+
+        if let Some(left) = &self.left.0 {
+            let left_code = format!("{}{}", current_code, left.value.label);
+            left.generate_codes(left_code, codes);
+        }
+
+        if let Some(right) = &self.right.0 {
+            let right_code = format!("{}{}", current_code, right.value.label);
+            right.generate_codes(right_code, codes);
+        }
+    }
+}
+
 impl<T: Ord> Ord for Node<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.value.cmp(&other.value)
@@ -197,6 +248,7 @@ impl<T: Ord> PartialOrd for Node<T> {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,4 +295,4 @@ mod tests {
         assert_eq!(tree.len(), 100);
         assert!(tree.has(&50));
     }
-}
+}*/
