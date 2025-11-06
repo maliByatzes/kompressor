@@ -36,11 +36,13 @@ impl Compress {
     pub fn compress(&self) {
         let counter = self.freq_counter();
 
-        let heap = BinaryHeap::from(counter);
+        let mut heap = BinaryHeap::from(counter);
 
         for sym in &heap {
             println!("{:?}", sym);
         }
+
+        let _ = Self::produce_tree(&mut heap);
     }
 
     fn produce_tree(heap: &mut BinaryHeap<Node<Symbol>>) {
@@ -51,7 +53,7 @@ impl Compress {
 
             let node1 = heap.pop().unwrap();
             let node2 = heap.pop().unwrap();
-            let new_val = node1.value.value + &node2.value.value;
+            let new_val = node1.value.value.clone() + &node2.value.value;
             let new_count = node1.value.count + node2.value.count;
 
             let new_node = Node {
@@ -59,9 +61,11 @@ impl Compress {
                     value: new_val,
                     count: new_count,
                 },
-                left: Subtree { node1 },
-                right: Subtree { root: node2 },
+                left: Subtree(Some(Box::new(node1))),
+                right: Subtree(Some(Box::new(node2))),
             };
+
+            heap.push(new_node);
         }
     }
 
@@ -183,11 +187,7 @@ impl<T: Ord> Node<T> {
 
 impl<T: Ord> Ord for Node<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        other
-            .value
-            .cmp(&self.value)
-            .then_with(|| self.left.cmp(&other.left))
-            .then_with(|| self.right.cmp(&other.right))
+        self.value.cmp(&other.value)
     }
 }
 
