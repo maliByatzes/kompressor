@@ -34,7 +34,7 @@ impl Compress {
         }
     }
 
-    pub fn compress(&self) {
+    pub fn compress(&self) -> String {
         let counter = self.freq_counter();
 
         let mut heap = BinaryHeap::from(counter);
@@ -55,6 +55,16 @@ impl Compress {
                 println!("'{chr}' -> {code}");
             }
         }
+
+        let mut compressed_str = String::new();
+
+        for chr in self.contents.chars() {
+            if let Some(code) = codes.get(&chr.to_string()) {
+                compressed_str.push_str(code);
+            }
+        }
+
+        compressed_str
     }
 
     fn produce_tree(heap: &mut BinaryHeap<Node<Symbol>>) -> Option<Node<Symbol>> {

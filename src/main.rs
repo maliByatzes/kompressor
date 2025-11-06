@@ -15,5 +15,7 @@ fn main() {
     file_contents.pop();
 
     let compr = Compress::new(file_contents.as_str());
-    compr.compress();
+    let compressed_str = compr.compress();
+
+    println!("{compressed_str}");
 }
